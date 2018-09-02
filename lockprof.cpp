@@ -161,6 +161,12 @@ public:
 
 	void destroy(pthread_mutex_t* mutex)
 	{
+		thread_local bool isHooked = false;
+
+		if (isHooked)
+			return;
+
+		ScopeSet set{isHooked};
 		Lock lock{&_mutex};
 		//std::cout << static_cast<void*>(mutex) << " destroy" << std::endl;
 
