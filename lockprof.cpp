@@ -223,6 +223,12 @@ int pthread_mutex_destroy(pthread_mutex_t* mutex)
 
 int pthread_mutex_lock(pthread_mutex_t* mutex)
 {
+	thread_local bool isHooked = false;
+	if (isHooked)
+		return ORIGCALL(pthread_mutex_lock, mutex);
+
+	ScopeSet set{isHooked};
+
 	thread_local std::chrono::system_clock::time_point lockTime;
 	lockTime = std::chrono::system_clock::now();
 	auto result = ORIGCALL(pthread_mutex_lock, mutex);
@@ -237,6 +243,12 @@ int pthread_mutex_trylock(pthread_mutex_t* mutex)
 
 int pthread_mutex_unlock(pthread_mutex_t* mutex)
 {
+	thread_local bool isHooked = false;
+	if (isHooked)
+		return ORIGCALL(pthread_mutex_unlock, mutex);
+
+	ScopeSet set{isHooked};
+
 	lockprof.unlock(mutex);
 	return ORIGCALL(pthread_mutex_unlock, mutex);
 }
