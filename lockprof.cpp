@@ -27,6 +27,7 @@ HOOK(int, pthread_mutex_unlock, pthread_mutex_t*);
 HOOK(sem_t*, sem_open, const char*, int, ...);
 HOOK(int, sem_close, sem_t*);
 HOOK(int, sem_wait, sem_t*);
+HOOK(int, sem_trywait, sem_t*);
 HOOK(int, sem_post, sem_t*);
 
 }
@@ -380,6 +381,21 @@ int sem_wait(sem_t* sem)
 	lockTime = std::chrono::system_clock::now();
 	auto result = ORIGCALL(sem_wait, sem);
 	lockprof.lock(sem, std::chrono::system_clock::now() - lockTime);
+	return result;
+}
+
+int sem_trywait(sem_t* sem)
+{
+	thread_local bool isHooked = false;
+	if (isHooked)
+		return ORIGCALL(sem_trywait, sem);
+
+	ScopeSet set{isHooked};
+	thread_local std::chrono::system_clock::time_point lockTime;
+	lockTime = std::chrono::system_clock::now();
+	auto result = ORIGCALL(sem_trywait, sem);
+	if (result == 0)
+		lockprof.lock(sem, std::chrono::system_clock::now() - lockTime);
 	return result;
 }
 
